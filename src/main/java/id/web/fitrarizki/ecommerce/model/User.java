@@ -5,35 +5,31 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "products")
+@Table(name = "users")
 @Setter
 @Getter
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
-public class Product {
+@AllArgsConstructor
+public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String name;
+    @Column(nullable = false, unique = true)
+    private String username;
 
-    @Column(columnDefinition = "TEXT")
-    private String description;
-
-    @Column(nullable = false)
-    private BigDecimal price;
-
-    @Column(name = "stock_quantity", nullable = false)
-    private Integer stockQuantity;
+    @Column(nullable = false, unique = true)
+    private String email;
 
     @Column(nullable = false)
-    private BigDecimal weight;
+    private String password;
+
+    @Column(nullable = false)
+    private boolean enabled;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

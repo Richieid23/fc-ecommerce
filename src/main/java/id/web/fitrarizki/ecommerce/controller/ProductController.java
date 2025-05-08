@@ -4,6 +4,7 @@ import id.web.fitrarizki.ecommerce.dto.PaginatedResponse;
 import id.web.fitrarizki.ecommerce.dto.product.ProductRequest;
 import id.web.fitrarizki.ecommerce.dto.product.ProductResponse;
 import id.web.fitrarizki.ecommerce.service.ProductService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/products")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "Bearer")
 public class ProductController {
     private final ProductService productService;
 

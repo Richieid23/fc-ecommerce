@@ -13,7 +13,7 @@ import java.util.List;
 public interface ProductCategoryRepository extends JpaRepository<ProductCategory, ProductCategoryId> {
 
     @Query(value = """
-        SELECT * FROM product_category
+        SELECT * FROM products_categories
         WHERE product_id = :productId
         """, nativeQuery = true)
     List<ProductCategory> findCategoriesByProductId(@Param("productId") Long productId);

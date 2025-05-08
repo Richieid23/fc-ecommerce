@@ -3,6 +3,7 @@ package id.web.fitrarizki.ecommerce.controller;
 import id.web.fitrarizki.ecommerce.dto.category.CategoryRequest;
 import id.web.fitrarizki.ecommerce.dto.category.CategoryResponse;
 import id.web.fitrarizki.ecommerce.service.CategoryService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -14,6 +15,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/categories")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "Bearer")
 public class CategoryController {
     private final CategoryService categoryService;
 

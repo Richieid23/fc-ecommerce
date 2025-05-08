@@ -10,7 +10,7 @@ import java.util.List;
 @Repository
 public interface CategoryRepository extends JpaRepository<Category, Long> {
     @Query(value = """
-        SELECT * FROM category
+        SELECT * FROM categories
         WHERE lower("name") like :name
         """, nativeQuery = true)
     List<Category> findByName(String name);

@@ -5,19 +5,20 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "products_categories")
+@Table(name = "users_roles")
 @Setter
 @Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductCategory {
+public class UserRole {
 
     @EmbeddedId
-    private ProductCategoryId id;
+    private UserRoleId id;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -28,15 +29,14 @@ public class ProductCategory {
     private LocalDateTime updatedAt;
 
     @Embeddable
-    @Builder
     @Setter
     @Getter
     @AllArgsConstructor
     @NoArgsConstructor
-    public static class ProductCategoryId {
-        @Column(name = "product_id")
-        private Long productId;
-        @Column(name = "category_id")
-        private Long categoryId;
+    public static class UserRoleId implements Serializable {
+        @Column(name = "user_id")
+        private Long userId;
+        @Column(name = "role_id")
+        private Long roleId;
     }
 }

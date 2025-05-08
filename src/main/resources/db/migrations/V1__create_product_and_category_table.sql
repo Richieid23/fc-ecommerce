@@ -1,5 +1,5 @@
 -- Create Product Table
-CREATE TABLE IF NOT EXISTS product (
+CREATE TABLE IF NOT EXISTS products (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT,
@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS product (
 );
 
 -- Create Category Table
-CREATE TABLE IF NOT EXISTS category (
+CREATE TABLE IF NOT EXISTS categories (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT,
@@ -20,16 +20,16 @@ CREATE TABLE IF NOT EXISTS category (
 );
 
 -- Create Product_Category Join Table
-CREATE TABLE IF NOT EXISTS product_category (
+CREATE TABLE IF NOT EXISTS products_categories (
     product_id BIGSERIAL,
     category_id BIGSERIAL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL,
     PRIMARY KEY (product_id, category_id),
-    FOREIGN KEY (product_id) REFERENCES product(id),
-    FOREIGN KEY (category_id) REFERENCES category(id)
+    FOREIGN KEY (product_id) REFERENCES products(id),
+    FOREIGN KEY (category_id) REFERENCES categories(id)
 );
 
 -- Add Indexes
-CREATE INDEX idx_product_name ON product(name);
-CREATE INDEX odx_category_name ON category(name);
+CREATE INDEX idx_product_name ON products(name);
+CREATE INDEX odx_category_name ON categories(name);

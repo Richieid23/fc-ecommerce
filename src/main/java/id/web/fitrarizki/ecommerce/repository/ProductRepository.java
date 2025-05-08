@@ -13,15 +13,15 @@ import java.util.List;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query(value = """
-        SELECT * FROM product
+        SELECT * FROM products
         WHERE lower("name") like :name
         """, nativeQuery = true)
     Page<Product> findByNameLike(String name, Pageable pageable);
 
     @Query(value = """
-        SELECT DISTINCT p.* FROM product p 
-        JOIN product_category pc ON pc.category_id = p.id
-        JOIN category c on c.id = pc.category_id
+        SELECT DISTINCT p.* FROM products p 
+        JOIN products_categories pc ON pc.category_id = p.id
+        JOIN categories c on c.id = pc.category_id
         WHERE c.name = :categoryName
         """, nativeQuery = true)
     List<Product> findByCategoryName(@Param("categoryName") String categoryName);
