@@ -22,6 +22,7 @@ public class ProductResponse {
     private BigDecimal price;
     private Integer stockQuantity;
     private BigDecimal weight;
+    private Long userId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<CategoryResponse> categories;
@@ -34,6 +35,7 @@ public class ProductResponse {
                 .price(product.getPrice())
                 .stockQuantity(product.getStockQuantity())
                 .weight(product.getWeight())
+                .userId(product.getUserId())
                 .createdAt(product.getCreatedAt())
                 .updatedAt(product.getUpdatedAt())
                 .categories(categories)

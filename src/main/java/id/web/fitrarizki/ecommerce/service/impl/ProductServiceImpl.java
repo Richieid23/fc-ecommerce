@@ -8,6 +8,7 @@ import id.web.fitrarizki.ecommerce.exception.ResourceNotFoundException;
 import id.web.fitrarizki.ecommerce.model.Category;
 import id.web.fitrarizki.ecommerce.model.Product;
 import id.web.fitrarizki.ecommerce.model.ProductCategory;
+import id.web.fitrarizki.ecommerce.model.UserInfo;
 import id.web.fitrarizki.ecommerce.repository.CategoryRepository;
 import id.web.fitrarizki.ecommerce.repository.ProductCategoryRepository;
 import id.web.fitrarizki.ecommerce.repository.ProductRepository;
@@ -18,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -66,12 +68,15 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponse createProduct(ProductRequest productRequest) {
         List<Category> categories = categoryRepository.findAllById(productRequest.getCategoryIds());
 
+        UserInfo userInfo = (UserInfo) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
         Product product = productRepository.save(Product.builder()
                 .name(productRequest.getName())
                 .description(productRequest.getDescription())
                 .price(productRequest.getPrice())
                 .stockQuantity(productRequest.getStockQuantity())
                 .weight(productRequest.getWeight())
+                .userId(userInfo.getUser().getId())
                 .build());
 
         List<ProductCategory> productCategoryList = generateProductCategories(product, categories);
