@@ -1,13 +1,12 @@
 package id.web.fitrarizki.ecommerce.service.impl;
 
-import id.web.fitrarizki.ecommerce.dto.order.CheckOutRequest;
-import id.web.fitrarizki.ecommerce.dto.order.OrderItemResponse;
-import id.web.fitrarizki.ecommerce.dto.order.ShippingRateRequest;
-import id.web.fitrarizki.ecommerce.dto.order.ShippingRateResponse;
+import id.web.fitrarizki.ecommerce.dto.order.*;
+import id.web.fitrarizki.ecommerce.dto.payment.PaymentResponse;
 import id.web.fitrarizki.ecommerce.exception.ResourceNotFoundException;
 import id.web.fitrarizki.ecommerce.model.*;
 import id.web.fitrarizki.ecommerce.repository.*;
 import id.web.fitrarizki.ecommerce.service.OrderService;
+import id.web.fitrarizki.ecommerce.service.PaymentService;
 import id.web.fitrarizki.ecommerce.service.ShippingService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -33,12 +32,13 @@ public class OrderServiceImpl implements OrderService {
     private final UserAddressRepository userAddressRepository;
     private final ProductRepository productRepository;
     private final ShippingService mockShippingService;
+    private final PaymentService paymentService;
 
     private final BigDecimal TAX_RATE = BigDecimal.valueOf(0.11);
 
     @Override
     @Transactional
-    public Order checkout(CheckOutRequest checkOutRequest) {
+    public OrderResponse checkout(CheckOutRequest checkOutRequest) {
         List<CartItem> selectedItems = cartItemRepository.findAllById(checkOutRequest.getCartItemIds());
         if (selectedItems.isEmpty()) {
             throw new ResourceNotFoundException("Cart item not found");
@@ -106,7 +106,27 @@ public class OrderServiceImpl implements OrderService {
         savedOrder.setTaxFee(taxFee);
         savedOrder.setTotalAmount(totalAmount);
 
-        return savedOrder;
+        // interact with xendit API
+        // generate payment url
+        String paymentUrl = "";
+
+        try {
+            PaymentResponse paymentResponse = paymentService.create(savedOrder);
+            savedOrder.setXenditInvoiceId(paymentResponse.getXenditInvoiceId());
+            savedOrder.setXenditPaymentMethod(paymentResponse.getXenditPaymentMethod());
+            savedOrder.setXenditPaymentStatus(paymentResponse.getXenditInvoiceStatus());
+            paymentUrl = paymentResponse.getXenditPaymentUrl();
+
+        } catch (Exception e) {
+            log.error("Payment failed for order {}, message: {}", savedOrder.getId(), e.getMessage());
+            savedOrder.setStatus("PAYMENT_FAILED");
+        }
+
+        orderRepository.save(savedOrder);
+
+        OrderResponse orderResponse = OrderResponse.fromOrder(savedOrder);
+        orderResponse.setPaymentUrl(paymentUrl);
+        return orderResponse;
     }
 
     @Override

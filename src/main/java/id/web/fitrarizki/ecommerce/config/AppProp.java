@@ -13,11 +13,19 @@ import java.time.Duration;
 @Getter
 public class AppProp {
     private JWT jwt;
+    private Xendit xendit;
 
     @Setter
     @Getter
     public static class JWT {
         private String secretKey;
         private Duration expirationTime;
+    }
+
+    @Setter
+    @Getter
+    public static class Xendit {
+        private String secretKey;
+        private String publicKey;
     }
 }

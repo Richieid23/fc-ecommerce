@@ -30,7 +30,7 @@ public class OrderController {
         UserInfo user = (UserInfo) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         checkOutRequest.setUserId(user.getUser().getId());
 
-        return ResponseEntity.ok(OrderResponse.fromOrder(orderService.checkout(checkOutRequest)));
+        return ResponseEntity.ok(orderService.checkout(checkOutRequest));
     }
 
     @GetMapping("/{id}")
