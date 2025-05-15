@@ -1,14 +1,20 @@
 package id.web.fitrarizki.ecommerce.controller;
 
+import id.web.fitrarizki.ecommerce.dto.PaginatedResponse;
 import id.web.fitrarizki.ecommerce.dto.order.CheckOutRequest;
 import id.web.fitrarizki.ecommerce.dto.order.OrderItemResponse;
 import id.web.fitrarizki.ecommerce.dto.order.OrderResponse;
+import id.web.fitrarizki.ecommerce.exception.BadRequestException;
 import id.web.fitrarizki.ecommerce.model.Order;
+import id.web.fitrarizki.ecommerce.model.OrderStatus;
 import id.web.fitrarizki.ecommerce.model.UserInfo;
 import id.web.fitrarizki.ecommerce.service.OrderService;
+import id.web.fitrarizki.ecommerce.util.PageUtil;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -45,9 +51,14 @@ public class OrderController {
     }
 
     @GetMapping
-    public ResponseEntity<List<OrderResponse>> getOrdersByUserId() {
+    public ResponseEntity<PaginatedResponse<OrderResponse>> getOrdersByUserId(@RequestParam(defaultValue = "0") int page,
+                                                                              @RequestParam(defaultValue = "20") int size,
+                                                                              @RequestParam(defaultValue = "id,desc") String[] sort) {
         UserInfo user = (UserInfo) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        return ResponseEntity.ok(orderService.getOrdersByUserId(user.getUser().getId()).stream().map(OrderResponse::fromOrder).toList());
+        List<Sort.Order> orders = PageUtil.parseSortOrderRequest(sort);
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(orders));
+
+        return ResponseEntity.ok(orderService.getPaginatedOrdersByUserId(user.getUser().getId(), pageRequest));
     }
 
     @PutMapping("/{id}/cancel")
@@ -63,7 +74,13 @@ public class OrderController {
 
     @PutMapping("/{id}/status")
     public ResponseEntity<Void> updateOrderStatus(@PathVariable Long id, @RequestParam String status) {
-        orderService.updateOrderStatus(id, status);
+        OrderStatus orderStatus = null;
+        try {
+            orderStatus = OrderStatus.valueOf(status);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Unrecognized order status: " + status);
+        }
+        orderService.updateOrderStatus(id, orderStatus);
         return ResponseEntity.ok().build();
     }
 

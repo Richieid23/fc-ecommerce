@@ -1,7 +1,6 @@
 package id.web.fitrarizki.ecommerce.util;
 
 import id.web.fitrarizki.ecommerce.dto.PaginatedResponse;
-import id.web.fitrarizki.ecommerce.dto.product.ProductResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 

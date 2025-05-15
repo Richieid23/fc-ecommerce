@@ -36,7 +36,8 @@ public class Order {
     private BigDecimal totalAmount;
 
     @Column(nullable = false)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    private OrderStatus status;
 
     @Column(nullable = false)
     private LocalDateTime orderDate;

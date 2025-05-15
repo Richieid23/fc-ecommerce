@@ -1,5 +1,8 @@
 package id.web.fitrarizki.ecommerce.service.impl;
 
+import com.xendit.exception.XenditException;
+import com.xendit.model.Invoice;
+import id.web.fitrarizki.ecommerce.dto.PaginatedResponse;
 import id.web.fitrarizki.ecommerce.dto.order.*;
 import id.web.fitrarizki.ecommerce.dto.payment.PaymentResponse;
 import id.web.fitrarizki.ecommerce.exception.ResourceNotFoundException;
@@ -8,9 +11,14 @@ import id.web.fitrarizki.ecommerce.repository.*;
 import id.web.fitrarizki.ecommerce.service.OrderService;
 import id.web.fitrarizki.ecommerce.service.PaymentService;
 import id.web.fitrarizki.ecommerce.service.ShippingService;
+import id.web.fitrarizki.ecommerce.util.OrderStateTransitionUtil;
+import id.web.fitrarizki.ecommerce.util.PageUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -48,7 +56,7 @@ public class OrderServiceImpl implements OrderService {
 
         Order order = Order.builder()
                 .userId(checkOutRequest.getUserId())
-                .status("PENDING")
+                .status(OrderStatus.PENDING)
                 .orderDate(LocalDateTime.now())
                 .totalAmount(BigDecimal.ZERO)
                 .taxFee(BigDecimal.ZERO)
@@ -119,7 +127,7 @@ public class OrderServiceImpl implements OrderService {
 
         } catch (Exception e) {
             log.error("Payment failed for order {}, message: {}", savedOrder.getId(), e.getMessage());
-            savedOrder.setStatus("PAYMENT_FAILED");
+            savedOrder.setStatus(OrderStatus.PAYMENT_FAILED);
         }
 
         orderRepository.save(savedOrder);
@@ -140,7 +148,13 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public List<Order> getOrdersByStatus(String status) {
+    public PaginatedResponse<OrderResponse> getPaginatedOrdersByUserId(Long userId, Pageable pageable) {
+        Page<OrderResponse> orderPage = orderRepository.findByUserId(userId, pageable).map(OrderResponse::fromOrder);
+        return PageUtil.getPaginatedResponse(orderPage);
+    }
+
+    @Override
+    public List<Order> getOrdersByStatus(OrderStatus status) {
         return orderRepository.findByStatus(status);
     }
 
@@ -149,12 +163,13 @@ public class OrderServiceImpl implements OrderService {
     public void cancelOrder(Long id) {
         Order order = orderRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
-        if (!order.getStatus().equals("PENDING")) {
+        if (!OrderStateTransitionUtil.isValidTransition(order.getStatus(), OrderStatus.CANCELLED)) {
             throw new IllegalStateException("Cannot cancel order that is not in pending state");
         }
 
-        order.setStatus("CANCELLED");
+        order.setStatus(OrderStatus.CANCELLED);
         orderRepository.save(order);
+        cancelXenditInvoice(order);
     }
 
     @Override
@@ -189,15 +204,48 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public void updateOrderStatus(Long id, String status) {
+    @Transactional
+    public void updateOrderStatus(Long id, OrderStatus status) {
         Order order = orderRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+
+        if (!OrderStateTransitionUtil.isValidTransition(order.getStatus(), status)) {
+            throw new IllegalStateException("Cannot update orders state");
+        }
 
         order.setStatus(status);
         orderRepository.save(order);
+
+        if (status.equals(OrderStatus.CANCELLED)) {
+            cancelXenditInvoice(order);
+        }
     }
 
     @Override
     public BigDecimal calculateOrderTotal(Long orderId) {
         return orderItemRepository.calculateTotalPrice(orderId);
+    }
+
+    private void cancelXenditInvoice(Order order) {
+        try {
+            Invoice invoice = Invoice.expire(order.getXenditInvoiceId());
+            order.setXenditPaymentStatus(invoice.getStatus());
+            orderRepository.save(order);
+        } catch (XenditException e) {
+            log.error("Xendit error: {}", e.getMessage());
+        }
+    }
+
+    // run every minute
+    @Scheduled(cron = "0 * * * * *")
+    @Transactional
+    public void cancelUnpaidOrders() {
+        LocalDateTime cancelThreshold = LocalDateTime.now().minusDays(1);
+        List<Order> unpaidOrders = orderRepository.findByStatusAndOrderDateBefore(OrderStatus.PENDING, cancelThreshold);
+
+        for (Order unpaidOrder : unpaidOrders) {
+            unpaidOrder.setStatus(OrderStatus.CANCELLED);
+            orderRepository.save(unpaidOrder);
+            cancelXenditInvoice(unpaidOrder);
+        }
     }
 }

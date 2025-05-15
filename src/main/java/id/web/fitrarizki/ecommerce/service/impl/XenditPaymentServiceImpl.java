@@ -6,6 +6,7 @@ import id.web.fitrarizki.ecommerce.dto.payment.PaymentNotification;
 import id.web.fitrarizki.ecommerce.dto.payment.PaymentResponse;
 import id.web.fitrarizki.ecommerce.exception.ResourceNotFoundException;
 import id.web.fitrarizki.ecommerce.model.Order;
+import id.web.fitrarizki.ecommerce.model.OrderStatus;
 import id.web.fitrarizki.ecommerce.model.User;
 import id.web.fitrarizki.ecommerce.repository.OrderRepository;
 import id.web.fitrarizki.ecommerce.repository.UserRepository;
@@ -89,16 +90,16 @@ public class XenditPaymentServiceImpl implements PaymentService {
 
         switch (status) {
             case "PAID":
-                order.setStatus("PAID");
+                order.setStatus(OrderStatus.PAID);
                 break;
             case "EXPIRED":
-                order.setStatus("CANCELLED");
+                order.setStatus(OrderStatus.CANCELLED);
                 break;
             case "FAILED":
-                order.setStatus("PAYMENT_FAILED");
+                order.setStatus(OrderStatus.PAYMENT_FAILED);
                 break;
             case "PENDING":
-                order.setStatus("PENDING");
+                order.setStatus(OrderStatus.PENDING);
                 break;
             default:
         }

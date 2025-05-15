@@ -7,11 +7,13 @@ import id.web.fitrarizki.ecommerce.dto.order.ShippingRateResponse;
 import id.web.fitrarizki.ecommerce.exception.ResourceNotFoundException;
 import id.web.fitrarizki.ecommerce.model.Order;
 import id.web.fitrarizki.ecommerce.model.OrderItem;
+import id.web.fitrarizki.ecommerce.model.OrderStatus;
 import id.web.fitrarizki.ecommerce.model.Product;
 import id.web.fitrarizki.ecommerce.repository.OrderItemRepository;
 import id.web.fitrarizki.ecommerce.repository.OrderRepository;
 import id.web.fitrarizki.ecommerce.repository.ProductRepository;
 import id.web.fitrarizki.ecommerce.service.ShippingService;
+import id.web.fitrarizki.ecommerce.util.OrderStateTransitionUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -54,7 +56,12 @@ public class MockShippingServiceImpl implements ShippingService {
         String awbNumber = generateAwbNumber(request.getOrderId());
 
         Order order = orderRepository.findById(request.getOrderId()).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
-        order.setStatus("SHIPPING");
+
+        if (OrderStateTransitionUtil.isValidTransition(order.getStatus(), OrderStatus.SHIPPING)) {
+            throw new IllegalStateException("Invalid order state transition");
+        }
+
+        order.setStatus(OrderStatus.SHIPPING);
         order.setAwbNumber(awbNumber);
         orderRepository.save(order);
 
