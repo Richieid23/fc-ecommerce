@@ -41,7 +41,7 @@ public class GenericExceptionHandler {
                 .build();
     }
 
-    @ExceptionHandler(BadRequestException.class)
+    @ExceptionHandler({BadRequestException.class, InventoryException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public @ResponseBody ErrorResponse badRequestExceptionHandler(BadRequestException e) {
         return ErrorResponse.builder()

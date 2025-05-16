@@ -3,6 +3,7 @@ package id.web.fitrarizki.ecommerce.service.impl;
 import id.web.fitrarizki.ecommerce.dto.cart.CartItemResponse;
 import id.web.fitrarizki.ecommerce.exception.BadRequestException;
 import id.web.fitrarizki.ecommerce.exception.ForbiddenAccessException;
+import id.web.fitrarizki.ecommerce.exception.InventoryException;
 import id.web.fitrarizki.ecommerce.exception.ResourceNotFoundException;
 import id.web.fitrarizki.ecommerce.model.Cart;
 import id.web.fitrarizki.ecommerce.model.CartItem;
@@ -35,10 +36,14 @@ public class CartServiceImpl implements CartService {
     @Transactional
     public void addCartItem(Long userId, Long productId, int quantity) {
         Cart cart = cartRepository.findByUserId(userId).orElseGet(() -> cartRepository.save(Cart.builder().userId(userId).build()));
-        Product product = productRepository.findById(productId).orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+        Product product = productRepository.findByIdWithPesimisticLock(productId).orElseThrow(() -> new ResourceNotFoundException("Product not found"));
 
         if (product.getUserId().equals(userId)) {
             throw new BadRequestException("Cannot add your own product to cart");
+        }
+
+        if(product.getStockQuantity() <= 0) {
+            throw new InventoryException("Product stock quantity is less than required quantity");
         }
 
         Optional<CartItem> cartItem = cartItemRepository.findByCartIdAndProductId(cart.getId(), productId);

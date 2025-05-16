@@ -5,9 +5,11 @@ import com.xendit.model.Invoice;
 import id.web.fitrarizki.ecommerce.dto.PaginatedResponse;
 import id.web.fitrarizki.ecommerce.dto.order.*;
 import id.web.fitrarizki.ecommerce.dto.payment.PaymentResponse;
+import id.web.fitrarizki.ecommerce.exception.InventoryException;
 import id.web.fitrarizki.ecommerce.exception.ResourceNotFoundException;
 import id.web.fitrarizki.ecommerce.model.*;
 import id.web.fitrarizki.ecommerce.repository.*;
+import id.web.fitrarizki.ecommerce.service.InventoryService;
 import id.web.fitrarizki.ecommerce.service.OrderService;
 import id.web.fitrarizki.ecommerce.service.PaymentService;
 import id.web.fitrarizki.ecommerce.service.ShippingService;
@@ -41,6 +43,7 @@ public class OrderServiceImpl implements OrderService {
     private final ProductRepository productRepository;
     private final ShippingService mockShippingService;
     private final PaymentService paymentService;
+    private final InventoryService inventoryService;
 
     private final BigDecimal TAX_RATE = BigDecimal.valueOf(0.11);
 
@@ -53,6 +56,11 @@ public class OrderServiceImpl implements OrderService {
         }
 
         UserAddress shippingAddress = userAddressRepository.findById(checkOutRequest.getUserAddressId()).orElseThrow(() -> new ResourceNotFoundException("Shipping address not found"));
+
+        Map<Long, Integer> productQuantities = selectedItems.stream().collect(Collectors.toMap(CartItem::getProductId, CartItem::getQuantity));
+        if (!inventoryService.checkInventoryAvailability(productQuantities)) {
+            throw new InventoryException("Inventory not available");
+        }
 
         Order order = Order.builder()
                 .userId(checkOutRequest.getUserId())
@@ -130,6 +138,10 @@ public class OrderServiceImpl implements OrderService {
             savedOrder.setStatus(OrderStatus.PAYMENT_FAILED);
         }
 
+        if (!savedOrder.getStatus().equals(OrderStatus.PAYMENT_FAILED)) {
+            inventoryService.decreaseInventory(productQuantities);
+        }
+
         orderRepository.save(savedOrder);
 
         OrderResponse orderResponse = OrderResponse.fromOrder(savedOrder);
@@ -167,9 +179,12 @@ public class OrderServiceImpl implements OrderService {
             throw new IllegalStateException("Cannot cancel order that is not in pending state");
         }
 
+        List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId());
+        Map<Long, Integer> productQuantities = orderItems.stream().collect(Collectors.toMap(OrderItem::getProductId, OrderItem::getQuantity));
         order.setStatus(OrderStatus.CANCELLED);
         orderRepository.save(order);
         cancelXenditInvoice(order);
+        inventoryService.increaseInventory(productQuantities);
     }
 
     @Override
@@ -217,6 +232,9 @@ public class OrderServiceImpl implements OrderService {
 
         if (status.equals(OrderStatus.CANCELLED)) {
             cancelXenditInvoice(order);
+            List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId());
+            Map<Long, Integer> productQuantities = orderItems.stream().collect(Collectors.toMap(OrderItem::getProductId, OrderItem::getQuantity));
+            inventoryService.increaseInventory(productQuantities);
         }
     }
 
