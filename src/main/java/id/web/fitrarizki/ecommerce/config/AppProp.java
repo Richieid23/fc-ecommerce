@@ -14,6 +14,7 @@ import java.time.Duration;
 public class AppProp {
     private JWT jwt;
     private Xendit xendit;
+    private RateLimit rateLimit;
 
     @Setter
     @Getter
@@ -27,5 +28,13 @@ public class AppProp {
     public static class Xendit {
         private String secretKey;
         private String publicKey;
+    }
+
+    @Setter
+    @Getter
+    public static class RateLimit {
+        private int defaultLimit = 100;
+        private int limitRefreshPeriod = 60;
+        private int timeout = 1;
     }
 }

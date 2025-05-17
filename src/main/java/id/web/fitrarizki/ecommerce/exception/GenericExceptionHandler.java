@@ -1,6 +1,7 @@
 package id.web.fitrarizki.ecommerce.exception;
 
 import id.web.fitrarizki.ecommerce.dto.ErrorResponse;
+import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -98,6 +99,16 @@ public class GenericExceptionHandler {
     public @ResponseBody ErrorResponse forbiddenAccessExceptionHandler(ForbiddenAccessException e) {
         return ErrorResponse.builder()
                 .code(HttpStatus.FORBIDDEN.value())
+                .message(e.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    @ExceptionHandler(RequestNotPermitted.class)
+    @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
+    public @ResponseBody ErrorResponse requestNotPermittedExceptionHandler(RequestNotPermitted e) {
+        return ErrorResponse.builder()
+                .code(HttpStatus.TOO_MANY_REQUESTS.value())
                 .message(e.getMessage())
                 .timestamp(LocalDateTime.now())
                 .build();

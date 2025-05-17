@@ -10,6 +10,7 @@ import id.web.fitrarizki.ecommerce.model.UserRole;
 import id.web.fitrarizki.ecommerce.repository.RoleRepository;
 import id.web.fitrarizki.ecommerce.repository.UserRepository;
 import id.web.fitrarizki.ecommerce.repository.UserRoleRepository;
+import id.web.fitrarizki.ecommerce.service.CacheService;
 import id.web.fitrarizki.ecommerce.service.UserService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,10 @@ public class UserServiceImpl implements UserService {
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final CacheService cacheService;
+
+    private final String USER_CACHE_KEY = "user:";
+    private final String USER_ROLES_CACHE_KEY = "user:roles:";
 
     @Override
     @Transactional
@@ -113,6 +118,11 @@ public class UserServiceImpl implements UserService {
 
         userRepository.save(user);
         List<Role> roles = roleRepository.findByUserId(user.getId());
+
+        String userCacheKey = USER_CACHE_KEY + user.getUsername();
+        String userRolesCacheKey = USER_ROLES_CACHE_KEY + user.getUsername();
+        cacheService.evict(userCacheKey);
+        cacheService.evict(userRolesCacheKey);
 
         return UserResponse.fromUserAndRoles(user, roles);
     }

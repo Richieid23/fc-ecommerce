@@ -1,5 +1,6 @@
 package id.web.fitrarizki.ecommerce.service.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import id.web.fitrarizki.ecommerce.dto.PaginatedResponse;
 import id.web.fitrarizki.ecommerce.dto.category.CategoryResponse;
 import id.web.fitrarizki.ecommerce.dto.product.ProductRequest;
@@ -12,7 +13,9 @@ import id.web.fitrarizki.ecommerce.model.UserInfo;
 import id.web.fitrarizki.ecommerce.repository.CategoryRepository;
 import id.web.fitrarizki.ecommerce.repository.ProductCategoryRepository;
 import id.web.fitrarizki.ecommerce.repository.ProductRepository;
+import id.web.fitrarizki.ecommerce.service.CacheService;
 import id.web.fitrarizki.ecommerce.service.ProductService;
+import id.web.fitrarizki.ecommerce.service.RateLimitingService;
 import id.web.fitrarizki.ecommerce.util.PageUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +26,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +34,11 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
     private final ProductCategoryRepository productCategoryRepository;
+    private final CacheService cacheService;
+    private final RateLimitingService rateLimitingService;
+
+    private final String PRODUCT_CACHE_KEY = "products:";
+    private final String PRODUCT_CATEGORY_CACHE_KEY = "product:categories:";
 
     @Override
     public List<ProductResponse> getProducts() {
@@ -41,26 +50,35 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public PaginatedResponse<ProductResponse> getProducts(Integer page, Integer size, String[] sort, String name) {
-        List<Sort.Order> orders = PageUtil.parseSortOrderRequest(sort);
-        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(orders));
+        return rateLimitingService.executeWithRateLimit("product_listing", () -> {
+            List<Sort.Order> orders = PageUtil.parseSortOrderRequest(sort);
+            PageRequest pageRequest = PageRequest.of(page, size, Sort.by(orders));
 
-        Page<ProductResponse> products;
-        if (name != null && !name.isEmpty()) {
-            name = name.toLowerCase();
-            products = productRepository.findByNameLike("%"+name+"%", pageRequest).map(product -> ProductResponse.fromProductAndCategories(product, getProductCategories(product)));
-        } else {
-            products = productRepository.findAll(pageRequest).map(product -> ProductResponse.fromProductAndCategories(product, getProductCategories(product)));
-        }
+            Page<ProductResponse> products;
+            if (name != null && !name.isEmpty()) {
+                products = productRepository.findByNameLike("%"+name.toLowerCase()+"%", pageRequest).map(product -> ProductResponse.fromProductAndCategories(product, getProductCategories(product)));
+            } else {
+                products = productRepository.findAll(pageRequest).map(product -> ProductResponse.fromProductAndCategories(product, getProductCategories(product)));
+            }
 
-        return PageUtil.getPaginatedResponse(products);
+            return PageUtil.getPaginatedResponse(products);
+        });
     }
 
     @Override
     public ProductResponse getProductById(Long id) {
+        String cacheKey = PRODUCT_CACHE_KEY+id;
+        Optional<ProductResponse> cachedProduct = cacheService.get(cacheKey, ProductResponse.class);
+        if (cachedProduct.isPresent()) {
+            return cachedProduct.get();
+        }
+
         Product product = productRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Product not found"));
         List<CategoryResponse> categoryResponses = getProductCategories(product);
 
-        return ProductResponse.fromProductAndCategories(product, categoryResponses);
+        ProductResponse productResponse = ProductResponse.fromProductAndCategories(product, categoryResponses);
+        cacheService.set(cacheKey, productResponse);
+        return productResponse;
     }
 
     @Override
@@ -83,8 +101,9 @@ public class ProductServiceImpl implements ProductService {
 
         productCategoryRepository.saveAll(productCategoryList);
 
-        return ProductResponse.fromProductAndCategories(product, categories.stream().map(CategoryResponse::fromCategory)
-                .toList());
+        ProductResponse productResponse = ProductResponse.fromProductAndCategories(product, categories.stream().map(CategoryResponse::fromCategory).toList());
+        cacheService.set(PRODUCT_CACHE_KEY+product.getId(), productResponse);
+        return productResponse;
     }
 
     @Override
@@ -107,6 +126,7 @@ public class ProductServiceImpl implements ProductService {
 
         productCategoryRepository.saveAll(productCategoryList);
 
+        cacheService.evict(PRODUCT_CACHE_KEY+id);
         return ProductResponse.fromProductAndCategories(product, categories.stream().map(CategoryResponse::fromCategory)
                 .toList());
     }
@@ -119,6 +139,7 @@ public class ProductServiceImpl implements ProductService {
 
         productCategoryRepository.deleteAll(productCategoryList);
         productRepository.delete(product);
+        cacheService.evict(PRODUCT_CACHE_KEY+id);
     }
 
     private List<ProductCategory> generateProductCategories(Product product, List<Category> categories) {
@@ -133,12 +154,20 @@ public class ProductServiceImpl implements ProductService {
     }
 
     private List<CategoryResponse> getProductCategories(Product product) {
+        String cacheKey = PRODUCT_CATEGORY_CACHE_KEY+product.getId();
+        Optional<List<CategoryResponse>> categoryResponsesOpt = cacheService.get(cacheKey, new TypeReference<List<CategoryResponse>>() {});
+        if (categoryResponsesOpt.isPresent()) {
+            return categoryResponsesOpt.get();
+        }
+
         List<Long> productCategoryIds = productCategoryRepository.findCategoriesByProductId(product.getId())
                 .stream()
                 .map(productCategory -> productCategory.getId().getCategoryId())
                 .toList();
-        return categoryRepository.findAllById(productCategoryIds)
+        List<CategoryResponse> categoryResponses = categoryRepository.findAllById(productCategoryIds)
                 .stream()
                 .map(CategoryResponse::fromCategory).toList();
+        cacheService.set(cacheKey, categoryResponses);
+        return categoryResponses;
     }
 }
