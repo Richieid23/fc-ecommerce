@@ -10,6 +10,7 @@ import id.web.fitrarizki.ecommerce.model.OrderStatus;
 import id.web.fitrarizki.ecommerce.model.User;
 import id.web.fitrarizki.ecommerce.repository.OrderRepository;
 import id.web.fitrarizki.ecommerce.repository.UserRepository;
+import id.web.fitrarizki.ecommerce.service.EmailService;
 import id.web.fitrarizki.ecommerce.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +27,7 @@ public class XenditPaymentServiceImpl implements PaymentService {
 
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
+    private final EmailService emailService;
 
     @Override
     public PaymentResponse create(Order order) {
@@ -91,15 +93,19 @@ public class XenditPaymentServiceImpl implements PaymentService {
         switch (status) {
             case "PAID":
                 order.setStatus(OrderStatus.PAID);
+                emailService.notifySuccessfulPayment(order);
                 break;
             case "EXPIRED":
                 order.setStatus(OrderStatus.CANCELLED);
+                emailService.notifyUnsuccessfulPayment(order);
                 break;
             case "FAILED":
                 order.setStatus(OrderStatus.PAYMENT_FAILED);
+                emailService.notifyUnsuccessfulPayment(order);
                 break;
             case "PENDING":
                 order.setStatus(OrderStatus.PENDING);
+                emailService.notifyUnsuccessfulPayment(order);
                 break;
             default:
         }

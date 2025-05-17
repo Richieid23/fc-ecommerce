@@ -15,6 +15,7 @@ public class AppProp {
     private JWT jwt;
     private Xendit xendit;
     private RateLimit rateLimit;
+    private Sendgrid sendgrid;
 
     @Setter
     @Getter
@@ -36,5 +37,29 @@ public class AppProp {
         private int defaultLimit = 100;
         private int limitRefreshPeriod = 60;
         private int timeout = 1;
+    }
+
+    @Setter
+    @Getter
+    public static class Sendgrid {
+        private String apiKey;
+        private String from;
+
+        private Template template;
+        private Retrier retrier;
+
+        @Setter
+        @Getter
+        public static class Template {
+            private String paymentSuccessfulId;
+            private String paymentFailedId;
+        }
+
+        @Setter
+        @Getter
+        public static class Retrier {
+            private int maxAttempt = 3;
+            private Duration waitDuration;
+        }
     }
 }
