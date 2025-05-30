@@ -17,6 +17,7 @@ public class AppProp {
     private RateLimit rateLimit;
     private Sendgrid sendgrid;
     private Elasticsearch elasticsearch;
+    private Redis redis;
 
     @Setter
     @Getter
@@ -84,5 +85,11 @@ public class AppProp {
                 private Duration waitDuration;
             }
         }
+    }
+
+    @Setter
+    @Getter
+    public static class Redis {
+        private Duration suggestionCacheTtl;
     }
 }

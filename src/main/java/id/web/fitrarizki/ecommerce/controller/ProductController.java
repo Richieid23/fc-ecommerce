@@ -18,6 +18,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/products")
 @RequiredArgsConstructor
@@ -30,6 +32,33 @@ public class ProductController {
     @GetMapping("/search")
     public ResponseEntity<SearchResponse<ProductResponse>> searchProduct(@RequestBody ProductSearchRequest productRequest) {
         return ResponseEntity.ok(searchService.searchProducts(productRequest));
+    }
+
+    @GetMapping("/suggest")
+    public ResponseEntity<List<String>> suggestProduct(@RequestParam String text) {
+        List<String> suggestion = List.of();
+        if (text.length() > 2) {
+            suggestion = searchService.combinedAutocomplete(text);
+        }
+        return ResponseEntity.ok(suggestion);
+    }
+
+    @GetMapping("/suggest/ngram")
+    public ResponseEntity<List<String>> ngramSuggestProduct(@RequestParam String text) {
+        List<String> suggestion = List.of();
+        if (text.length() > 2) {
+            suggestion = searchService.getNgramAutocomplete(text);
+        }
+        return ResponseEntity.ok(suggestion);
+    }
+
+    @GetMapping("/suggest/fuzzy")
+    public ResponseEntity<List<String>> fuzzySuggestProduct(@RequestParam String text) {
+        List<String> suggestion = List.of();
+        if (text.length() > 2) {
+            suggestion = searchService.getFuzzyAutocomplete(text);
+        }
+        return ResponseEntity.ok(suggestion);
     }
 
     @GetMapping

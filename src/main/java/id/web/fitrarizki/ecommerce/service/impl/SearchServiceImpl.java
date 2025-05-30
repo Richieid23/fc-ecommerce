@@ -5,6 +5,7 @@ import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
+import co.elastic.clients.elasticsearch.core.search.CompletionSuggestOption;
 import co.elastic.clients.json.JsonData;
 import id.web.fitrarizki.ecommerce.dto.SearchResponse;
 import id.web.fitrarizki.ecommerce.dto.category.CategoryResponse;
@@ -22,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -168,6 +170,90 @@ public class SearchServiceImpl implements SearchService {
         List<Long> productIds = getTopProductIds(userActivities);
 
         return productRecommendationOnActivityType(productIds, activityType);
+    }
+
+    @Override
+    public List<String> getAutocomplete(String query) {
+        co.elastic.clients.elasticsearch.core.SearchResponse<Void> response;
+
+        try {
+            response = elasticsearchClient.search(s ->
+                    s.index(productIndexService.getProductIndexName()).suggest(su ->
+                            su.suggesters("name_suggest", fs ->
+                                    fs.prefix(query)
+                                            .completion(cs ->
+                                                    cs.field("nameSuggest")
+                                                            .skipDuplicates(true)
+                                                            .size(3)))),
+                    Void.class);
+
+            return response.suggest().get("name_suggest").stream().flatMap(s -> s.completion().options().stream())
+                    .map(CompletionSuggestOption::text)
+                    .toList();
+        } catch (IOException e) {
+            log.error("Error while searching products: {}", e.getMessage());
+            return List.of();
+        }
+
+    }
+
+    @Override
+    public List<String> getNgramAutocomplete(String query) {
+        co.elastic.clients.elasticsearch.core.SearchResponse<ProductDocument> response;
+
+        try {
+            response = elasticsearchClient.search(s ->
+                            s.index(productIndexService.getProductIndexName())
+                                    .query(q ->
+                                            q.match(m ->
+                                                    m.field("nameNgram")
+                                                            .query(query)
+                                                            .analyzer("ngram_analyzer")))
+                                    .size(3),
+                    ProductDocument.class);
+
+            return response.hits().hits().stream().map(hit -> hit.source().getName()).toList();
+        } catch (IOException e) {
+            log.error("Error while searching products: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    @Override
+    public List<String> getFuzzyAutocomplete(String query) {
+        co.elastic.clients.elasticsearch.core.SearchResponse<ProductDocument> response;
+
+        try {
+            response = elasticsearchClient.search(s ->
+                            s.index(productIndexService.getProductIndexName())
+                                    .query(q ->
+                                            q.fuzzy(f ->
+                                                    f.field("name")
+                                                            .value(query)
+                                                            .fuzziness("AUTO")))
+                                    .size(3),
+                    ProductDocument.class);
+
+            return response.hits().hits().stream().map(hit -> hit.source().getName()).toList();
+        } catch (IOException e) {
+            log.error("Error while searching products: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    @Override
+    public List<String> combinedAutocomplete(String query) {
+        List<String> results = new ArrayList<>(getAutocomplete(query));
+
+        if (results.size() < 5) {
+            results.addAll(getNgramAutocomplete(query));
+        }
+
+        if (results.size() < 5) {
+            results.addAll(getFuzzyAutocomplete(query));
+        }
+
+        return results.stream().distinct().limit(5).toList();
     }
 
     private SearchResponse<ProductResponse> productRecommendationOnActivityType(List<Long> productIds, ActivityType activityType) {
