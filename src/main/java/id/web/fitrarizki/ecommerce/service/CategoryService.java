@@ -2,6 +2,7 @@ package id.web.fitrarizki.ecommerce.service;
 
 import id.web.fitrarizki.ecommerce.dto.category.CategoryRequest;
 import id.web.fitrarizki.ecommerce.dto.category.CategoryResponse;
+import id.web.fitrarizki.ecommerce.model.Category;
 
 import java.util.List;
 
@@ -11,4 +12,5 @@ public interface CategoryService {
     CategoryResponse createCategory(CategoryRequest categoryRequest);
     CategoryResponse updateCategory(Long id, CategoryRequest categoryRequest);
     void deleteCategory(Long id);
+    List<Category> getProductCategories(Long productId);
 }

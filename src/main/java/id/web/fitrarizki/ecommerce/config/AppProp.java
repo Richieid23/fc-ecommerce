@@ -16,6 +16,7 @@ public class AppProp {
     private Xendit xendit;
     private RateLimit rateLimit;
     private Sendgrid sendgrid;
+    private Elasticsearch elasticsearch;
 
     @Setter
     @Getter
@@ -60,6 +61,28 @@ public class AppProp {
         public static class Retrier {
             private int maxAttempt = 3;
             private Duration waitDuration;
+        }
+    }
+
+    @Setter
+    @Getter
+    public static class Elasticsearch {
+        private String host;
+        private int port;
+
+        private Indexing indexing;
+
+        @Setter
+        @Getter
+        public static class Indexing {
+            private Retrier retrier;
+
+            @Setter
+            @Getter
+            public static class Retrier {
+                private int maxAttempt = 3;
+                private Duration waitDuration;
+            }
         }
     }
 }

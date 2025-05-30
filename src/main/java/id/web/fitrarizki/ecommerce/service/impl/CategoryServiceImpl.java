@@ -5,6 +5,7 @@ import id.web.fitrarizki.ecommerce.dto.category.CategoryResponse;
 import id.web.fitrarizki.ecommerce.exception.ResourceNotFoundException;
 import id.web.fitrarizki.ecommerce.model.Category;
 import id.web.fitrarizki.ecommerce.repository.CategoryRepository;
+import id.web.fitrarizki.ecommerce.repository.ProductCategoryRepository;
 import id.web.fitrarizki.ecommerce.service.CategoryService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CategoryServiceImpl implements CategoryService {
     private final CategoryRepository categoryRepository;
+    private final ProductCategoryRepository productCategoryRepository;
 
     @Override
     public List<CategoryResponse> getCategories() {
@@ -58,5 +60,11 @@ public class CategoryServiceImpl implements CategoryService {
     public void deleteCategory(Long id) {
         Category category = categoryRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Category not found"));
         categoryRepository.delete(category);
+    }
+
+    @Override
+    public List<Category> getProductCategories(Long productId) {
+        List<Long> categoryIds = productCategoryRepository.findCategoriesByProductId(productId).stream().map(productCategory -> productCategory.getId().getCategoryId()).toList();
+        return categoryRepository.findAllById(categoryIds);
     }
 }

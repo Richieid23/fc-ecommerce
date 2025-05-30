@@ -14,6 +14,7 @@ import id.web.fitrarizki.ecommerce.repository.CategoryRepository;
 import id.web.fitrarizki.ecommerce.repository.ProductCategoryRepository;
 import id.web.fitrarizki.ecommerce.repository.ProductRepository;
 import id.web.fitrarizki.ecommerce.service.CacheService;
+import id.web.fitrarizki.ecommerce.service.ProductIndexService;
 import id.web.fitrarizki.ecommerce.service.ProductService;
 import id.web.fitrarizki.ecommerce.service.RateLimitingService;
 import id.web.fitrarizki.ecommerce.util.PageUtil;
@@ -36,6 +37,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductCategoryRepository productCategoryRepository;
     private final CacheService cacheService;
     private final RateLimitingService rateLimitingService;
+    private final ProductIndexService productIndexService;
 
     private final String PRODUCT_CACHE_KEY = "products:";
     private final String PRODUCT_CATEGORY_CACHE_KEY = "product:categories:";
@@ -103,6 +105,7 @@ public class ProductServiceImpl implements ProductService {
 
         ProductResponse productResponse = ProductResponse.fromProductAndCategories(product, categories.stream().map(CategoryResponse::fromCategory).toList());
         cacheService.set(PRODUCT_CACHE_KEY+product.getId(), productResponse);
+        productIndexService.reIndexProducts(product);
         return productResponse;
     }
 
@@ -127,6 +130,7 @@ public class ProductServiceImpl implements ProductService {
         productCategoryRepository.saveAll(productCategoryList);
 
         cacheService.evict(PRODUCT_CACHE_KEY+id);
+        productIndexService.reIndexProducts(product);
         return ProductResponse.fromProductAndCategories(product, categories.stream().map(CategoryResponse::fromCategory)
                 .toList());
     }
@@ -140,6 +144,7 @@ public class ProductServiceImpl implements ProductService {
         productCategoryRepository.deleteAll(productCategoryList);
         productRepository.delete(product);
         cacheService.evict(PRODUCT_CACHE_KEY+id);
+        productIndexService.deleteProduct(product);
     }
 
     private List<ProductCategory> generateProductCategories(Product product, List<Category> categories) {

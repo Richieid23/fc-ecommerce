@@ -1,9 +1,12 @@
 package id.web.fitrarizki.ecommerce.controller;
 
 import id.web.fitrarizki.ecommerce.dto.PaginatedResponse;
+import id.web.fitrarizki.ecommerce.dto.SearchResponse;
 import id.web.fitrarizki.ecommerce.dto.product.ProductRequest;
 import id.web.fitrarizki.ecommerce.dto.product.ProductResponse;
+import id.web.fitrarizki.ecommerce.dto.product.ProductSearchRequest;
 import id.web.fitrarizki.ecommerce.service.ProductService;
+import id.web.fitrarizki.ecommerce.service.SearchService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +20,12 @@ import org.springframework.web.bind.annotation.*;
 @SecurityRequirement(name = "Bearer")
 public class ProductController {
     private final ProductService productService;
+    private final SearchService searchService;
+
+    @GetMapping("/search")
+    public ResponseEntity<SearchResponse<ProductResponse>> searchProduct(@RequestBody ProductSearchRequest productRequest) {
+        return ResponseEntity.ok(searchService.searchProducts(productRequest));
+    }
 
     @GetMapping
     public ResponseEntity<PaginatedResponse<ProductResponse>> getProducts(

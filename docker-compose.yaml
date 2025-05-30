@@ -1,22 +1,22 @@
 version: "3.8"
 
 services:
-  app:
-    build: .
-    ports:
-      - "8080:8080"
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/db_fc_ecommerce
-      - SPRING_DATASOURCE_USERNAME=ecommerce_user
-      - SPRING_DATASOURCE_PASSWORD=@pguser123
-    depends_on:
-      - db
-      - redis
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "200k"
-        max-file: "10"
+#  app:
+#    build: .
+#    ports:
+#      - "8080:8080"
+#    environment:
+#      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/db_fc_ecommerce
+#      - SPRING_DATASOURCE_USERNAME=ecommerce_user
+#      - SPRING_DATASOURCE_PASSWORD=@pguser123
+#    depends_on:
+#      - db
+#      - redis
+#    logging:
+#      driver: "json-file"
+#      options:
+#        max-size: "200k"
+#        max-file: "10"
 
   db:
     image: postgres:13
@@ -59,9 +59,25 @@ services:
     depends_on:
       - db
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.14.0
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+
 volumes:
   postgres_data:
   redis_data:
   sonarqube_data:
   sonarqube_extensions:
   sonarqube_logs:
+  elasticsearch_data:
