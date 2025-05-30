@@ -5,6 +5,7 @@ import co.elastic.clients.elasticsearch.core.BulkRequest;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
 import id.web.fitrarizki.ecommerce.dto.product.ProductDocument;
+import id.web.fitrarizki.ecommerce.model.ActivityType;
 import id.web.fitrarizki.ecommerce.model.Category;
 import id.web.fitrarizki.ecommerce.model.Product;
 import id.web.fitrarizki.ecommerce.repository.CategoryRepository;
@@ -12,6 +13,7 @@ import id.web.fitrarizki.ecommerce.repository.ProductCategoryRepository;
 import id.web.fitrarizki.ecommerce.repository.ProductRepository;
 import id.web.fitrarizki.ecommerce.service.BulkReindexService;
 import id.web.fitrarizki.ecommerce.service.ProductIndexService;
+import id.web.fitrarizki.ecommerce.service.UserActivityService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -33,6 +35,7 @@ public class BulkReindexServiceImpl implements BulkReindexService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final ProductIndexService productIndexService;
+    private final UserActivityService userActivityService;
 
     private final int BATCH_SIZE = 100;
 
@@ -49,6 +52,12 @@ public class BulkReindexServiceImpl implements BulkReindexService {
                 List<Long> categoryIds = productCategoryRepository.findCategoriesByProductId(product.getId()).stream().map(productCategory -> productCategory.getId().getCategoryId()).toList();
                 List<Category> categories = categoryRepository.findAllById(categoryIds);
                 ProductDocument productDocument = ProductDocument.fromProductAndCategories(product, categories);
+
+                Long viewCount = userActivityService.getActivityCount(product.getId(), ActivityType.VIEW);
+                Long purchaseCount = userActivityService.getActivityCount(product.getId(), ActivityType.PURCHASE);
+
+                productDocument.setViewCount(viewCount);
+                productDocument.setPurchaseCount(purchaseCount);
                 productDocuments.add(productDocument);
 
                 if (productDocuments.size() >= BATCH_SIZE) {

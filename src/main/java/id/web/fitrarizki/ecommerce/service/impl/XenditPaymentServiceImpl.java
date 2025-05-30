@@ -6,18 +6,23 @@ import id.web.fitrarizki.ecommerce.dto.payment.PaymentNotification;
 import id.web.fitrarizki.ecommerce.dto.payment.PaymentResponse;
 import id.web.fitrarizki.ecommerce.exception.ResourceNotFoundException;
 import id.web.fitrarizki.ecommerce.model.Order;
+import id.web.fitrarizki.ecommerce.model.OrderItem;
 import id.web.fitrarizki.ecommerce.model.OrderStatus;
 import id.web.fitrarizki.ecommerce.model.User;
+import id.web.fitrarizki.ecommerce.repository.OrderItemRepository;
 import id.web.fitrarizki.ecommerce.repository.OrderRepository;
 import id.web.fitrarizki.ecommerce.repository.UserRepository;
 import id.web.fitrarizki.ecommerce.service.EmailService;
 import id.web.fitrarizki.ecommerce.service.PaymentService;
+import id.web.fitrarizki.ecommerce.service.UserActivityService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -28,6 +33,8 @@ public class XenditPaymentServiceImpl implements PaymentService {
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
     private final EmailService emailService;
+    private final UserActivityService userActivityService;
+    private final OrderItemRepository orderItemRepository;
 
     @Override
     public PaymentResponse create(Order order) {
@@ -94,6 +101,7 @@ public class XenditPaymentServiceImpl implements PaymentService {
             case "PAID":
                 order.setStatus(OrderStatus.PAID);
                 emailService.notifySuccessfulPayment(order);
+                trackPurchaseOrder(order);
                 break;
             case "EXPIRED":
                 order.setStatus(OrderStatus.CANCELLED);
@@ -115,5 +123,11 @@ public class XenditPaymentServiceImpl implements PaymentService {
         }
 
         orderRepository.save(order);
+    }
+
+    @Async
+    private void trackPurchaseOrder(Order order) {
+        List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId());
+        orderItems.forEach(orderItem -> userActivityService.trackPurchase(orderItem.getProductId(), order.getUserId()));
     }
 }

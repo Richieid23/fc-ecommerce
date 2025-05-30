@@ -1,0 +1,1 @@
+CREATE INDEX idx_user_activities_type_date ON user_activities (user_id, activity_type, created_at)
