@@ -18,6 +18,7 @@ public class AppProp {
     private Sendgrid sendgrid;
     private Elasticsearch elasticsearch;
     private Redis redis;
+    private Kafka kafka;
 
     @Setter
     @Getter
@@ -91,5 +92,18 @@ public class AppProp {
     @Getter
     public static class Redis {
         private Duration suggestionCacheTtl;
+    }
+
+    @Setter
+    @Getter
+    public static class Kafka {
+        private Topic topic;
+
+        @Setter
+        @Getter
+        public static class Topic {
+            private String productReindexName;
+            private String userActivityReindexName;
+        }
     }
 }

@@ -3,6 +3,7 @@ package id.web.fitrarizki.ecommerce.service.impl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import id.web.fitrarizki.ecommerce.dto.PaginatedResponse;
 import id.web.fitrarizki.ecommerce.dto.category.CategoryResponse;
+import id.web.fitrarizki.ecommerce.dto.product.ProductReindex;
 import id.web.fitrarizki.ecommerce.dto.product.ProductRequest;
 import id.web.fitrarizki.ecommerce.dto.product.ProductResponse;
 import id.web.fitrarizki.ecommerce.exception.ResourceNotFoundException;
@@ -35,6 +36,7 @@ public class ProductServiceImpl implements ProductService {
     private final CacheService cacheService;
     private final RateLimitingService rateLimitingService;
     private final ProductIndexService productIndexService;
+    private final ProductReindexProducer productReindexProducer;
 
     private final String PRODUCT_CACHE_KEY = "products:";
     private final String PRODUCT_CATEGORY_CACHE_KEY = "product:categories:";
@@ -102,7 +104,8 @@ public class ProductServiceImpl implements ProductService {
 
         ProductResponse productResponse = ProductResponse.fromProductAndCategories(product, categories.stream().map(CategoryResponse::fromCategory).toList());
         cacheService.set(PRODUCT_CACHE_KEY+product.getId(), productResponse);
-        productIndexService.reIndexProducts(product);
+//        productIndexService.reIndexProducts(product);
+        productReindexProducer.publishProductReindex(ProductReindex.builder().action("REINDEX").productId(product.getId()).build());
         return productResponse;
     }
 
@@ -127,7 +130,8 @@ public class ProductServiceImpl implements ProductService {
         productCategoryRepository.saveAll(productCategoryList);
 
         cacheService.evict(PRODUCT_CACHE_KEY+id);
-        productIndexService.reIndexProducts(product);
+//        productIndexService.reIndexProducts(product);
+        productReindexProducer.publishProductReindex(ProductReindex.builder().action("REINDEX").productId(product.getId()).build());
         return ProductResponse.fromProductAndCategories(product, categories.stream().map(CategoryResponse::fromCategory)
                 .toList());
     }
@@ -141,7 +145,13 @@ public class ProductServiceImpl implements ProductService {
         productCategoryRepository.deleteAll(productCategoryList);
         productRepository.delete(product);
         cacheService.evict(PRODUCT_CACHE_KEY+id);
-        productIndexService.deleteProduct(product);
+//        productIndexService.deleteProduct(product);
+        productReindexProducer.publishProductReindex(ProductReindex.builder().action("DELETE").productId(product.getId()).build());
+    }
+
+    @Override
+    public Product get(Long id) {
+        return productRepository.findById(id).orElse(null);
     }
 
     private List<ProductCategory> generateProductCategories(Product product, List<Category> categories) {

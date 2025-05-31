@@ -3,6 +3,7 @@ package id.web.fitrarizki.ecommerce.service;
 import id.web.fitrarizki.ecommerce.dto.PaginatedResponse;
 import id.web.fitrarizki.ecommerce.dto.product.ProductRequest;
 import id.web.fitrarizki.ecommerce.dto.product.ProductResponse;
+import id.web.fitrarizki.ecommerce.model.Product;
 import org.springframework.data.domain.Page;
 
 import java.util.List;
@@ -14,4 +15,5 @@ public interface ProductService {
     ProductResponse createProduct(ProductRequest productRequest);
     ProductResponse updateProduct(Long id, ProductRequest productRequest);
     void deleteProductById(Long id);
+    Product get(Long id);
 }
