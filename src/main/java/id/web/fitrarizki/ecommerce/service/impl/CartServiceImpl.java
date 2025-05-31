@@ -12,6 +12,8 @@ import id.web.fitrarizki.ecommerce.repository.CartItemRepository;
 import id.web.fitrarizki.ecommerce.repository.CartRepository;
 import id.web.fitrarizki.ecommerce.repository.ProductRepository;
 import id.web.fitrarizki.ecommerce.service.CartService;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +33,8 @@ public class CartServiceImpl implements CartService {
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
+    private final MeterRegistry meterRegistry;
+    private Gauge cartItemGauge;
 
     @Override
     @Transactional
@@ -59,6 +63,7 @@ public class CartServiceImpl implements CartService {
                     .build());
         }
 
+        Gauge.builder("cart_items", this, value -> value.getCartItems(userId).size()).description("Number of cart items").register(meterRegistry);
     }
 
     @Override
@@ -73,6 +78,8 @@ public class CartServiceImpl implements CartService {
             cartItem.setQuantity(quantity);
             cartItemRepository.save(cartItem);
         }
+
+        Gauge.builder("cart_items", this, value -> value.getCartItems(userId).size()).description("Number of cart items").register(meterRegistry);
     }
 
     @Override
@@ -86,6 +93,8 @@ public class CartServiceImpl implements CartService {
         }
 
         cartItemRepository.delete(cartItem);
+
+        Gauge.builder("cart_items", this, value -> value.getCartItems(userId).size()).description("Number of cart items").register(meterRegistry);
     }
 
     @Override
@@ -93,6 +102,7 @@ public class CartServiceImpl implements CartService {
     public void clearCart(Long userId) {
         Cart cart = cartRepository.findByUserId(userId).orElseThrow(() -> new ResourceNotFoundException("Cart not found"));
         cartItemRepository.deleteAllByCartId(cart.getId());
+        Gauge.builder("cart_items", this, value -> value.getCartItems(userId).size()).description("Number of cart items").register(meterRegistry);
     }
 
     @Override

@@ -119,6 +119,24 @@ services:
       KAFKA_CLUSTER_0_ZOOKEEPER: zookeeper-fc:2181
       KAFKA_CLUSTER_0_READONLY: 'false'
 
+  prometheus:
+    image: prom/prometheus:v2.30.3
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+
+  grafana:
+    image: grafana/grafana:8.2.2
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_storage:/var/lib/grafana
+    depends_on:
+      - prometheus
+
 volumes:
   postgres_data:
   redis_data:
@@ -126,3 +144,4 @@ volumes:
   sonarqube_extensions:
   sonarqube_logs:
   elasticsearch_data:
+  grafana_storage:

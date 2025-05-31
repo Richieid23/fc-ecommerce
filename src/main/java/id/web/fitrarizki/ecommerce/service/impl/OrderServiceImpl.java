@@ -15,6 +15,9 @@ import id.web.fitrarizki.ecommerce.service.PaymentService;
 import id.web.fitrarizki.ecommerce.service.ShippingService;
 import id.web.fitrarizki.ecommerce.util.OrderStateTransitionUtil;
 import id.web.fitrarizki.ecommerce.util.PageUtil;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +47,9 @@ public class OrderServiceImpl implements OrderService {
     private final ShippingService mockShippingService;
     private final PaymentService paymentService;
     private final InventoryService inventoryService;
+    private final MeterRegistry meterRegistry;
+    private Counter checkoutCounter;
+    private DistributionSummary orderValueSummary;
 
     private final BigDecimal TAX_RATE = BigDecimal.valueOf(0.11);
 
@@ -146,6 +152,23 @@ public class OrderServiceImpl implements OrderService {
 
         OrderResponse orderResponse = OrderResponse.fromOrder(savedOrder);
         orderResponse.setPaymentUrl(paymentUrl);
+
+        if (checkoutCounter == null) {
+            checkoutCounter = Counter.builder("checkout.count")
+                    .description("Number of checkout operations")
+                    .register(meterRegistry);
+        }
+
+        if (orderValueSummary == null) {
+            orderValueSummary = DistributionSummary.builder("order.value")
+                    .description("Order value in rupiah")
+                    .baseUnit("Rupiah")
+                    .register(meterRegistry);
+        }
+
+        checkoutCounter.increment();
+        orderValueSummary.record(totalAmount.doubleValue());
+
         return orderResponse;
     }
 
